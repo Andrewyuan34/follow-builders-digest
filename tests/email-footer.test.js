@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildEmailContent } from '../scripts/email-footer.js';
+import { buildEmailContent, formatDigestDate } from '../scripts/email-footer.js';
+
+test('digest date follows Vancouver noon rather than the server next-day date', () => {
+  assert.equal(formatDigestDate(new Date('2026-11-17T19:00:00Z')), 'Tuesday, November 17, 2026');
+});
+
+test('digest date uses Vancouver permanent UTC-7 after the 2026 rule change', () => {
+  assert.equal(formatDigestDate(new Date('2026-11-17T07:30:00Z')), 'Tuesday, November 17, 2026');
+});
 
 test('email without settings preserves the existing plain-text payload', () => {
   const text = 'Original digest\n第二行\n';

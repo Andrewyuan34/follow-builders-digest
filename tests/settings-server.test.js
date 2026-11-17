@@ -22,7 +22,7 @@ async function fixture(t) {
   const page = await fetch(`${url}/settings`, {headers:{cookie}});
   const html = await page.text();
   const csrf = html.match(/name="csrf" value="([^"]+)"/)[1];
-  return {home,url,cookie,csrf,login,html};
+  return {home,url,cookie,csrf,login,html,page};
 }
 
 test('email URL is HTTPS and requires both configuration values', () => {
@@ -35,6 +35,8 @@ test('GET link exchanges token for secure session and never changes schedule', a
   const f = await fixture(t);
   assert.equal(f.login.status,303);
   assert.equal(f.login.headers.get('location'), '/settings');
+  assert.equal(f.login.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(f.page.headers.get('referrer-policy'), 'same-origin');
   assert.match(f.login.headers.get('set-cookie'), /HttpOnly; Secure; SameSite=Lax/);
   assert.match(f.html, /12:00/);
   assert.ok(!f.html.includes(token));

@@ -1,4 +1,13 @@
+import moment from 'moment-timezone';
+
 const SETTINGS_LABEL = '调整发送时间';
+
+export function formatDigestDate(date, timeZone = 'America/Vancouver') {
+  if (!moment.tz.zone(timeZone)) throw new TypeError('Invalid digest time zone');
+  const zoned = moment.tz(date, timeZone).locale('en');
+  if (!zoned.isValid()) throw new TypeError('Invalid digest date');
+  return zoned.format('dddd, MMMM D, YYYY');
+}
 
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (character) => ({

@@ -1,23 +1,15 @@
-// Daily wall-clock scheduling. IANA time zones keep daylight-saving changes
-// separate from the server's own clock and timezone.
+// Daily wall-clock scheduling uses the bundled IANA database. Older host/Node
+// databases still apply Vancouver's repealed November 2026 clock change.
+import moment from 'moment-timezone';
 
-const formatters = new Map();
 const occurrences = new Map();
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
-function formatter(timeZone) {
-  if (!formatters.has(timeZone)) {
-    formatters.set(timeZone, new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      calendar: 'iso8601',
-      numberingSystem: 'latn',
-      hourCycle: 'h23',
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
-    }));
-  }
-  return formatters.get(timeZone);
+function zone(timeZone) {
+  const record = typeof timeZone === 'string' && moment.tz.zone(timeZone);
+  if (!record) throw new TypeError('Invalid IANA time zone');
+  return record;
 }
 
 function validDate(value, label = 'date') {
@@ -27,9 +19,11 @@ function validDate(value, label = 'date') {
 }
 
 function localParts(date, timeZone) {
-  const parts = Object.fromEntries(formatter(timeZone).formatToParts(date)
-    .filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
+  const at = date.getTime();
+  // utcOffset comes from Moment Timezone's bundled transition table, not the
+  // OS timezone or Intl. UTC getters then expose the corresponding wall clock.
+  const wallClock = new Date(at - zone(timeZone).utcOffset(at) * MINUTE).toISOString();
+  return { date: wallClock.slice(0, 10), time: wallClock.slice(11, 16) };
 }
 
 export function validateSchedule(schedule) {
@@ -42,9 +36,7 @@ export function validateSchedule(schedule) {
   if (typeof schedule.timeZone !== 'string' || !schedule.timeZone || schedule.timeZone.length > 100) {
     throw new TypeError('An IANA time zone is required');
   }
-  try { formatter(schedule.timeZone); } catch {
-    throw new TypeError('Invalid IANA time zone');
-  }
+  zone(schedule.timeZone);
   const normalized = { time: schedule.time, timeZone: schedule.timeZone };
   if (schedule.updatedAt !== undefined) {
     if (typeof schedule.updatedAt !== 'string' || !schedule.updatedAt) throw new TypeError('Invalid schedule update date');
@@ -55,6 +47,12 @@ export function validateSchedule(schedule) {
 
 export function localDateKey(date, timeZone) {
   return localParts(validDate(date), timeZone).date;
+}
+
+export function formatLocalDateTime(date, timeZone) {
+  const local = localParts(validDate(date), timeZone);
+  const [year, month, day] = local.date.split('-').map(Number);
+  return `${year}年${month}月${day}日 ${local.time}`;
 }
 
 function nextDateKey(dateKey) {

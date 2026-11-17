@@ -20,7 +20,9 @@ Replace the old daily digest cron with exactly one entry:
 * * * * * /usr/bin/flock -n /tmp/follow-builders.lock /home/ubuntu/follow-builders/run.sh
 ```
 
-The lightweight check runs each minute and only sends at the configured Vancouver time, automatically following daylight saving time. The scheduler records the attempted local date before calling the sender. A repeated DST hour, restarts, or changing the time after today's delivery cannot produce a second scheduled email. Missing DST times run at the next valid local minute. A delayed check catches up within the same day; there is no backlog from previous days.
+The lightweight check runs each minute and only sends at the configured Vancouver time. Scheduling and display use Moment Timezone 0.6.6 with IANA 2026f, rather than the potentially outdated timezone database embedded in Node.js. B.C. adopted permanent UTC-7 in 2026, so Vancouver noon on November 17, 2026 is 19:00 UTC, not 20:00 UTC. Keep this dependency's timezone data updated when IANA publishes rule changes. The scheduler records the attempted local date before calling the sender. A repeated historical DST hour, restarts, or changing the time after today's delivery cannot produce a second scheduled email. Missing DST times run at the next valid local minute. A delayed check catches up within the same day; there is no backlog from previous days.
+
+Timezone references: [B.C. announcement](https://archive.news.gov.bc.ca/releases/news_releases_2024-2028/2026AG0013-000209.htm), [IANA releases](https://www.iana.org/time-zones), and [Moment Timezone data](https://momentjs.com/timezone/).
 
 If migrating an already-running daily task, seed `schedule-state.json` with that day's `lastAttemptDate` and the last successful timestamp to avoid a duplicate on cutover. The scheduler logs failures and does not automatically retry ambiguous delivery failures. Inspect `digest.log` and `schedule-state.json` before any manual retry. Running `node scripts/run-digest.js` directly sends an actual email and bypasses daily deduplication.
 

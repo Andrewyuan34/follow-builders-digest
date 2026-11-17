@@ -26,7 +26,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import { config as loadEnv } from 'dotenv';
 import { getSettingsUrl } from './settings-config.js';
-import { buildEmailContent } from './email-footer.js';
+import { buildEmailContent, formatDigestDate } from './email-footer.js';
 
 // -- Constants ---------------------------------------------------------------
 
@@ -131,6 +131,10 @@ async function sendTelegram(text, botToken, chatId) {
 // The user provides their own Resend API key and email address.
 async function sendEmail(text, apiKey, toEmail, settingsUrl) {
   const content = buildEmailContent(text, settingsUrl);
+  const now = new Date();
+  const subjectDate = settingsUrl ? formatDigestDate(now) : now.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -140,9 +144,7 @@ async function sendEmail(text, apiKey, toEmail, settingsUrl) {
     body: JSON.stringify({
       from: 'AI Builders Digest <digest@resend.dev>',
       to: [toEmail],
-      subject: `AI Builders Digest — ${new Date().toLocaleDateString('en-US', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-      })}`,
+      subject: `AI Builders Digest — ${subjectDate}`,
       ...content
     })
   });
