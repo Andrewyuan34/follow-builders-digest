@@ -1,4 +1,15 @@
 # Replace this example domain before installing.
+{
+    log {
+        format filter {
+            wrap json
+            fields {
+                request delete
+            }
+        }
+    }
+}
+
 digest.example.com {
     reverse_proxy 127.0.0.1:8788
 }

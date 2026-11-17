@@ -12,7 +12,7 @@ Keep the existing `config.json` and `.env` (DeepSeek and Resend credentials). Cr
 
 Use the actual setup time for `updatedAt`; a newly selected time that has already passed takes effect the next day. Copy `settings.env.example` to `~/.follow-builders/.settings.env`, use your HTTPS domain, and generate a 32-byte random token. Keep the directory mode `700` and credential files mode `600`. The email link grants permission to change delivery time; do not share it publicly.
 
-Install `follow-builders-settings.service` (adjust the user and paths if needed), enable it, and configure Caddy using `Caddyfile.example`. Add your DNS record and allow TCP 80/443. The application binds only to `127.0.0.1:8788`; Caddy manages HTTPS. Do not enable access logging that stores settings-link query tokens.
+Install `follow-builders-settings.service` (adjust the user and paths if needed), enable it, and configure Caddy using `Caddyfile.example`. Add your DNS record and allow TCP 80/443. The application binds only to `127.0.0.1:8788`; Caddy manages HTTPS. The example removes request objects from runtime logs, so even proxy errors cannot record settings-link tokens. Do not enable access logging that stores settings-link query tokens.
 
 Replace the old daily digest cron with exactly one entry:
 

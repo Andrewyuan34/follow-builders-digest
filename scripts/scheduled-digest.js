@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { readFileSync, mkdirSync, writeFileSync, renameSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, renameSync, realpathSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -80,7 +80,7 @@ export function runScheduledDigest({
   return { status: state.status, exitCode, lastAttemptDate: state.lastAttemptDate };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
   try {
     const result = runScheduledDigest();
     if (result.status !== 'skipped') console.log(JSON.stringify({ event: 'scheduled-digest', ...result }));

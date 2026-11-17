@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { createHmac, randomBytes } from 'node:crypto';
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
+import { realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -115,7 +116,7 @@ export function createSettingsServer({home, baseUrl, token, now = () => new Date
   return server;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(resolve(process.argv[1])) === fileURLToPath(import.meta.url)) {
   const home = process.env.FOLLOW_BUILDERS_HOME || join(homedir(), '.follow-builders');
   loadEnv({path:join(home, '.settings.env')});
   const options = settingsOptions();
