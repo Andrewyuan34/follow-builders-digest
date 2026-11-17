@@ -23,14 +23,15 @@ import { homedir } from 'os';
 
 // -- Constants ---------------------------------------------------------------
 
-const USER_DIR = join(homedir(), '.follow-builders');
+const USER_DIR = process.env.FOLLOW_BUILDERS_HOME || join(homedir(), '.follow-builders');
 const CONFIG_PATH = join(USER_DIR, 'config.json');
 
-const FEED_X_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-x.json';
-const FEED_PODCASTS_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-podcasts.json';
-const FEED_BLOGS_URL = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/feed-blogs.json';
+const GITHUB_CONTENTS_BASE = 'https://api.github.com/repos/zarazhangrui/follow-builders/contents';
+const FEED_X_URL = `${GITHUB_CONTENTS_BASE}/feed-x.json?ref=main`;
+const FEED_PODCASTS_URL = `${GITHUB_CONTENTS_BASE}/feed-podcasts.json?ref=main`;
+const FEED_BLOGS_URL = `${GITHUB_CONTENTS_BASE}/feed-blogs.json?ref=main`;
 
-const PROMPTS_BASE = 'https://raw.githubusercontent.com/zarazhangrui/follow-builders/main/prompts';
+const PROMPTS_BASE = `${GITHUB_CONTENTS_BASE}/prompts`;
 const PROMPT_FILES = [
   'summarize-podcast.md',
   'summarize-tweets.md',
@@ -41,14 +42,41 @@ const PROMPT_FILES = [
 
 // -- Fetch helpers -----------------------------------------------------------
 
+async function fetchWithRetry(url, tries = 4) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    let timer;
+    try {
+      const ctrl = new AbortController();
+      timer = setTimeout(() => ctrl.abort(), 20000);
+      const isGitHubContents = url.startsWith('https://api.github.com/');
+      const res = await fetch(url, {
+        signal: ctrl.signal,
+        headers: isGitHubContents ? {
+          Accept: 'application/vnd.github.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent': 'follow-builders-digest'
+        } : undefined
+      });
+      return res;
+    } catch (err) {
+      lastErr = err;
+      await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr;
+}
+
 async function fetchJSON(url) {
-  const res = await fetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) return null;
   return res.json();
 }
 
 async function fetchText(url) {
-  const res = await fetch(url);
+  const res = await fetchWithRetry(url);
   if (!res.ok) return null;
   return res.text();
 }
@@ -121,7 +149,7 @@ async function main() {
     }
 
     // Priority 2: latest from GitHub (central updates)
-    const remote = await fetchText(`${PROMPTS_BASE}/${filename}`);
+    const remote = await fetchText(`${PROMPTS_BASE}/${filename}?ref=main`);
     if (remote) {
       prompts[key] = remote;
       continue;

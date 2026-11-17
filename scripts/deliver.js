@@ -25,12 +25,15 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { config as loadEnv } from 'dotenv';
+import { getSettingsUrl } from './settings-config.js';
+import { buildEmailContent } from './email-footer.js';
 
 // -- Constants ---------------------------------------------------------------
 
-const USER_DIR = join(homedir(), '.follow-builders');
+const USER_DIR = process.env.FOLLOW_BUILDERS_HOME || join(homedir(), '.follow-builders');
 const CONFIG_PATH = join(USER_DIR, 'config.json');
 const ENV_PATH = join(USER_DIR, '.env');
+const SETTINGS_ENV_PATH = join(USER_DIR, '.settings.env');
 
 // -- Read input --------------------------------------------------------------
 
@@ -126,7 +129,8 @@ async function sendTelegram(text, botToken, chatId) {
 
 // Sends the digest via Resend's email API.
 // The user provides their own Resend API key and email address.
-async function sendEmail(text, apiKey, toEmail) {
+async function sendEmail(text, apiKey, toEmail, settingsUrl) {
+  const content = buildEmailContent(text, settingsUrl);
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -139,7 +143,7 @@ async function sendEmail(text, apiKey, toEmail) {
       subject: `AI Builders Digest — ${new Date().toLocaleDateString('en-US', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
       })}`,
-      text: text
+      ...content
     })
   });
 
@@ -154,6 +158,7 @@ async function sendEmail(text, apiKey, toEmail) {
 async function main() {
   // Load env and config
   loadEnv({ path: ENV_PATH });
+  loadEnv({ path: SETTINGS_ENV_PATH });
 
   let config = {};
   if (existsSync(CONFIG_PATH)) {
@@ -189,7 +194,7 @@ async function main() {
         const toEmail = delivery.email;
         if (!apiKey) throw new Error('RESEND_API_KEY not found in .env');
         if (!toEmail) throw new Error('delivery.email not found in config.json');
-        await sendEmail(digestText, apiKey, toEmail);
+        await sendEmail(digestText, apiKey, toEmail, getSettingsUrl(config, process.env));
         console.log(JSON.stringify({
           status: 'ok',
           method: 'email',
@@ -205,10 +210,15 @@ async function main() {
         break;
     }
   } catch (err) {
+    let message = String(err.message || err);
+    for (const name of ['FOLLOW_BUILDERS_SETTINGS_TOKEN', 'RESEND_API_KEY', 'TELEGRAM_BOT_TOKEN', 'DEEPSEEK_API_KEY']) {
+      const secret = process.env[name];
+      if (secret) message = message.split(secret).join('[REDACTED]');
+    }
     console.log(JSON.stringify({
       status: 'error',
       method: delivery.method,
-      message: err.message
+      message
     }));
     process.exit(1);
   }

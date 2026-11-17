@@ -1,4 +1,7 @@
 scripts/node_modules/
 .env
+*.env
+.follow-builders/
+*.tar.gz
 *.log
 .DS_Store

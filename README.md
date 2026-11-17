@@ -1,5 +1,9 @@
 **English** | [中文](README.zh-CN.md)
 
+> This fork adds a standalone daily digest runner, Vancouver-aware scheduling,
+> and a secure delivery-time link at the bottom of each email. See
+> [self-hosted setup](deploy/README.md). It continues consuming the original author's public feeds.
+
 # Follow Builders, Not Influencers
 
 An AI-powered digest that tracks the top builders in AI — researchers, founders, PMs,
